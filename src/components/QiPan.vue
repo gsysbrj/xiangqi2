@@ -4,10 +4,17 @@ import QiZi from './QiZi.vue'
 
 // 棋子信息
 class QiZiInfo {
-  color = 'black'
+  color = ''
   name = ''
   location = [-1 , -1]
   picked = false
+
+  constructor(color, name, location, picked = false) {
+    this.color = color
+    this.name = name
+    this.location = location
+    this.picked = picked
+  }
 }
 
 // 局面信息
@@ -16,51 +23,65 @@ class Situation {
 }
 
 const state = reactive({
-  pickedLocation: [-1, -1],
   picked: null,
   situation: {
     qiZiInfoList: [
-      {name: '車', location: [0, 0], },
-      {name: '車', location: [0, 8], },
-      {name: '馬', location: [0, 1], },
-      {name: '馬', location: [0, 7], },
-      {name: '象', location: [0, 2], },
-      {name: '象', location: [0, 6], },
-      {name: '士', location: [0, 3], },
-      {name: '士', location: [0, 5], },
-      {name: '將', location: [0, 4], },
-      {name: '炮', location: [2, 1], },
-      {name: '炮', location: [2, 7], },
-      {name: '卒', location: [3, 0], },
-      {name: '卒', location: [3, 2], },
-      {name: '卒', location: [3, 4], },
-      {name: '卒', location: [3, 6], },
-      {name: '卒', location: [3, 8], },
-      {color: 'red', name: '車', location: [9, 0], },
-      {color: 'red', name: '車', location: [9, 8], },
-      {color: 'red', name: '馬', location: [9, 1], },
-      {color: 'red', name: '馬', location: [9, 7], },
-      {color: 'red', name: '相', location: [9, 2], },
-      {color: 'red', name: '相', location: [9, 6], },
-      {color: 'red', name: '仕', location: [9, 3], },
-      {color: 'red', name: '仕', location: [9, 5], },
-      {color: 'red', name: '帥', location: [9, 4], },
-      {color: 'red', name: '炮', location: [7, 1], },
-      {color: 'red', name: '炮', location: [7, 7], },
-      {color: 'red', name: '兵', location: [6, 0], },
-      {color: 'red', name: '兵', location: [6, 2], },
-      {color: 'red', name: '兵', location: [6, 4], },
-      {color: 'red', name: '兵', location: [6, 6], },
-      {color: 'red', name: '兵', location: [6, 8], },
+      new QiZiInfo('黑', '車', [0, 0]),
+      new QiZiInfo('黑', '車', [0, 8]),
+      new QiZiInfo('黑', '馬', [0, 1]),
+      new QiZiInfo('黑', '馬', [0, 7]),
+      new QiZiInfo('黑', '象', [0, 2]),
+      new QiZiInfo('黑', '象', [0, 6]),
+      new QiZiInfo('黑', '士', [0, 3]),
+      new QiZiInfo('黑', '士', [0, 5]),
+      new QiZiInfo('黑', '將', [0, 4]),
+      new QiZiInfo('黑', '炮', [2, 1]),
+      new QiZiInfo('黑', '炮', [2, 7]),
+      new QiZiInfo('黑', '卒', [3, 0]),
+      new QiZiInfo('黑', '卒', [3, 2]),
+      new QiZiInfo('黑', '卒', [3, 4]),
+      new QiZiInfo('黑', '卒', [3, 6]),
+      new QiZiInfo('黑', '卒', [3, 8]),
+      new QiZiInfo('红', '車', [9, 0]),
+      new QiZiInfo('红', '車', [9, 8]),
+      new QiZiInfo('红', '馬', [9, 1]),
+      new QiZiInfo('红', '馬', [9, 7]),
+      new QiZiInfo('红', '相', [9, 2]),
+      new QiZiInfo('红', '相', [9, 6]),
+      new QiZiInfo('红', '仕', [9, 3]),
+      new QiZiInfo('红', '仕', [9, 5]),
+      new QiZiInfo('红', '帥', [9, 4]),
+      new QiZiInfo('红', '炮', [7, 1]),
+      new QiZiInfo('红', '炮', [7, 7]),
+      new QiZiInfo('红', '兵', [6, 0]),
+      new QiZiInfo('红', '兵', [6, 2]),
+      new QiZiInfo('红', '兵', [6, 4]),
+      new QiZiInfo('红', '兵', [6, 6]),
+      new QiZiInfo('红', '兵', [6, 8]),
     ],
   }
 })
 
 function pick(q) {
+  // 拿起后放下棋子
   if (isPicked(q)) {
     state.picked = null
     return
   }
+  // 吃子
+  if (state.picked && state.picked.color !== q.color) {
+    if (isMoveCheckOk(q.location[0], q.location[1])) {
+      state.picked.location[0] = q.location[0]
+      state.picked.location[1] = q.location[1]
+      state.picked = null
+      q.location[0] = -100
+      q.location[1] = -100
+    } else {
+      console.warn('吃子违反规则!')
+    }
+    return
+  }
+  // 拿起棋子
   state.picked = q
 }
 
@@ -70,10 +91,37 @@ function isPicked(q) {
 
 function move(r, c) {
   if (state.picked) {
-    state.picked.location[0] = r
-    state.picked.location[1] = c
-    state.picked = null
+    if (isMoveCheckOk(r, c)) {
+      state.picked.location[0] = r
+      state.picked.location[1] = c
+      state.picked = null
+    } else {
+      console.warn('走子违反规则！')
+    }
   }
+}
+// 各种棋子走动时是否符合规则的判断逻辑
+function isMoveCheckOk(r, c) {
+  if (!state.picked) return false
+  const p = state.picked
+  if (p.name === '兵') {
+    if (p.location[0] < 5) { // 过河兵
+      return p.location[0] === r && (p.location[1] + 1 === c || p.location[1] - 1 === c) || // 可以拐弯一步
+      p.location[0] === r + 1 && p.location[1] === c // 或往前一步
+    } else { // 非过河兵
+      return p.location[0] === r + 1 && p.location[1] === c // 只能往前一步
+    }
+  } else if (p.name === '卒') {
+    if (p.location[0] > 4) { // 过河卒
+      return p.location[0] === r && (p.location[1] + 1 === c || p.location[1] - 1 === c) || // 可以拐弯一步
+      p.location[0] === r - 1 && p.location[1] === c // 或往前一步
+    } else { // 非过河卒
+      return p.location[0] === r - 1 && p.location[1] === c // 只能往前一步
+    }
+  } else {
+
+  }
+  return false
 }
 </script>
 <template>

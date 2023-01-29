@@ -8,7 +8,7 @@ defineProps({
 </script>
 <template>
     <div class="qizi" :class="{
-        red: color === 'red',
+        red: color === '红',
         picked: picked === true
     }" :style="{
         top: `${picked ? location[0] * 3 - 0.1 : location[0] * 3 + 0.1}rem`,
