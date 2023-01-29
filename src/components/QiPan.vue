@@ -17,6 +17,7 @@ class Situation {
 
 const state = reactive({
   pickedLocation: [-1, -1],
+  picked: null,
   situation: {
     qiZiInfoList: [
       {name: '車', location: [0, 0], },
@@ -55,25 +56,31 @@ const state = reactive({
   }
 })
 
-function pick(loc) {
-  if (isPicked(loc)) {
-    state.pickedLocation[0] = -1
-    state.pickedLocation[1] = -1
-    return;
+function pick(q) {
+  if (isPicked(q)) {
+    state.picked = null
+    return
   }
-  state.pickedLocation[0] = loc[0]
-  state.pickedLocation[1] = loc[1]
+  state.picked = q
 }
 
-function isPicked(loc) {
-  return state.pickedLocation[0] === loc[0] && state.pickedLocation[1] === loc[1]
+function isPicked(q) {
+  return q === state.picked
+}
+
+function move(r, c) {
+  if (state.picked) {
+    state.picked.location[0] = r
+    state.picked.location[1] = c
+    state.picked = null
+  }
 }
 </script>
 <template>
   <div class="qipan">
     <div>
-      <div v-for="r in 10" :class="`row row-${ r }`">
-        <div v-for="c in 9" :class="`cell cell-${ c }`">
+      <div v-for="r in 10" :class="`row row-${ r - 1 }`">
+        <div v-for="c in 9" :class="`cell cell-${ c - 1 }`" @mousedown="move(r - 1, c - 1)">
           <div class="line-x"></div>
           <div class="line-y"></div>
         </div>
@@ -83,8 +90,8 @@ function isPicked(loc) {
       :color="q.color" 
       :name="q.name" 
       :location="q.location.slice()"
-      :picked="isPicked(q.location)"
-      @mousedown="pick(q.location)"
+      :picked="isPicked(q)"
+      @mousedown="pick(q)"
       ></QiZi>
   </div>
 </template>
