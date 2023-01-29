@@ -126,7 +126,11 @@ function isMoveCheckOk(r, c) {
 </script>
 <template>
   <div class="qipan">
-    <div>
+    <div class="diagonal diagonal-1"></div>
+    <div class="diagonal diagonal-2"></div>
+    <div class="diagonal diagonal-3"></div>
+    <div class="diagonal diagonal-4"></div>
+    <div class="locations">
       <div v-for="r in 10" :class="`row row-${ r - 1 }`">
         <div v-for="c in 9" :class="`cell cell-${ c - 1 }`" @mousedown="move(r - 1, c - 1)">
           <div class="line-x"></div>
@@ -147,6 +151,39 @@ function isMoveCheckOk(r, c) {
 @line-color: blue;
 .qipan {
   position: relative;
+}
+// .locations {
+//   position: relative;
+//   top: 0;
+//   left: 0;
+// }
+.diagonal {
+  height: 1px;
+  background-color: @line-color;
+  width: 8.485281374238571rem;
+  position: absolute;
+  transform-origin: 0px 0px;
+
+  &-1 {
+    top: 1.5rem;
+    left: 10.5rem;
+    transform: rotate(45deg) scaleY(0.5);
+  }
+  &-2 {
+    top: 7.5rem;
+    left: 10.5rem;
+    transform: rotate(-45deg) scaleY(0.5);
+  }
+  &-3 {
+    top: 22.5rem;
+    left: 10.5rem;
+    transform: rotate(45deg) scaleY(0.5);
+  }
+  &-4 {
+    top: 28.5rem;
+    left: 10.5rem;
+    transform: rotate(-45deg) scaleY(0.5);
+  }
 }
 .row {
   display: flex;
