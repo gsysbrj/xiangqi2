@@ -121,7 +121,7 @@ function isMoveCheckOk(r, c) {
     const qzBt = []
     if (p.location[0] === r) { // 横着走
       for (const qz of state.situation.qiZiInfoList) {
-        if (qz.location[0] === r && between(qz.location[1], p.location[1], c)) {
+        if (qz.location[0] === r && betweenInclude(qz.location[1], p.location[1], c)) {
           qzBt.push(qz)
         }
       }
@@ -130,7 +130,7 @@ function isMoveCheckOk(r, c) {
       qzBt.sort((a, b) => a.location[1] - b.location[1])
     } else if(p.location[1] === c) { // 竖着走
       for (const qz of state.situation.qiZiInfoList) {
-        if (qz.location[1] === c && between(qz.location[0], p.location[0], r)) {
+        if (qz.location[1] === c && betweenInclude(qz.location[0], p.location[0], r)) {
           qzBt.push(qz)
         }
       }
@@ -143,15 +143,33 @@ function isMoveCheckOk(r, c) {
     if (qzBt.length === 3) { // 之间包含自己和目标共3个棋子，即为翻山吃子，则目标必须为对方棋子
       return qzBt[0] === p && qzBt[2].color !== p.color || qzBt[2] === p && qzBt[0].color !== p.color
     }
-  } else {
-
+  } else if (p.name === '馬') {
+    if (Math.abs(p.location[0] - r) === 1 && Math.abs(p.location[1] - c) === 2 || 
+        Math.abs(p.location[0] - r) === 2 && Math.abs(p.location[1] - c) === 1) {
+        // 蹩马腿判断
+        if (Math.abs(p.location[1] - c) === 2) {
+          if (state.situation.qiZiInfoList.some(qz => qz.location[0] === p.location[0] && between(qz.location[1], p.location[1], c))) {
+            console.warn('蹩马腿了！')
+            return false
+          }
+        } else {
+          if (state.situation.qiZiInfoList.some(qz => qz.location[1] === p.location[1] && between(qz.location[0], p.location[0], r))) {
+            console.warn('蹩马腿了！')
+            return false
+          }
+        }
+      return true
+    }
   }
   return false
 }
 
 // 判断a是否在b和c之间
-function between (a, b, c) {
+function betweenInclude (a, b, c) {
   return a >= b && a <= c || a <= b && a >= c
+}
+function between (a, b, c) {
+  return a > b && a < c || a < b && a > c
 }
 
 </script>
