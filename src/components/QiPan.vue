@@ -136,12 +136,16 @@ function isMoveCheckOk(r, c) {
       }
       // 竖着走时根据横坐标排序
       qzBt.sort((a, b) => a.location[0] - b.location[0])
+    } else {
+      // 不能斜着走
+      return false
     }
     if (qzBt.length === 1) { // 之间除了自己没有其他棋子，即为普通走子
       return true
     }
     if (qzBt.length === 3) { // 之间包含自己和目标共3个棋子，即为翻山吃子，则目标必须为对方棋子
-      return qzBt[0] === p && qzBt[2].color !== p.color || qzBt[2] === p && qzBt[0].color !== p.color
+      // return qzBt[0] === p && qzBt[2].color !== p.color || qzBt[2] === p && qzBt[0].color !== p.color
+      return true
     }
   } else if (p.name === '馬') {
     if (Math.abs(p.location[0] - r) === 1 && Math.abs(p.location[1] - c) === 2 || 
@@ -158,6 +162,68 @@ function isMoveCheckOk(r, c) {
             return false
           }
         }
+      return true
+    }
+  } else if (p.name === '車') {
+    // 只能直着走或者横着走，与目标之间最多只能有0个棋子
+    const qzBt = []
+    if (p.location[0] === r) { // 横着走
+      for (const qz of state.situation.qiZiInfoList) {
+        if (qz.location[0] === r && between(qz.location[1], p.location[1], c)) {
+          qzBt.push(qz)
+        }
+      }
+    } else if(p.location[1] === c) { // 竖着走
+      for (const qz of state.situation.qiZiInfoList) {
+        if (qz.location[1] === c && between(qz.location[0], p.location[0], r)) {
+          qzBt.push(qz)
+        }
+      }
+    } else {
+      // 不能斜着走
+      return false
+    }
+    if (qzBt.length === 0) { // 之间除了自己没有其他棋子，即为普通走子
+      return true
+    }
+  } else if (p.name === '相' || p.name === '象') { // 只能走田字格
+    if (Math.abs(p.location[0] - r) === 2 && Math.abs(p.location[1] - c) === 2) {
+      // 不能被塞了象眼
+      if (state.situation.qiZiInfoList.some(e => e.location[0] === (p.location[0] + r)/2 &&
+                                                   e.location[1] === (p.location[1] + c)/2)
+      ) {
+        console.warn('象眼被塞！')
+        return false
+      }
+      // 不能过河
+      if (p.name === '相' && r < 5) {
+        return false
+      }
+      if (p.name === '象' && r > 4) {
+        return false
+      }
+      return true
+    }
+  } else if (p.name === '士' || p.name === '仕') {
+    if (Math.abs(p.location[0] - r) === 1 && Math.abs(p.location[1] - c) === 1) {
+      if (p.name === '仕' && (r < 7 || c < 3 || c > 5)) { // 不能出九宫格
+        return false
+      }
+      if (p.name === '士' && (r > 2 || c < 3 || c > 5)) { // 不能出九宫格
+        return false
+      }
+      return true
+    }
+  } else { // 将帅只能在九宫格内走一步直线
+    if (p.location[0] === r && Math.abs(p.location[1] - c) === 1 ||
+        p.location[1] === c && Math.abs(p.location[0] - r) === 1
+    ) {
+      if (p.name === '帥' && (r < 7 || c < 3 || c > 5)) { // 不能出九宫格
+        return false
+      }
+      if (p.name === '將' && (r > 2 || c < 3 || c > 5)) { // 不能出九宫格
+        return false
+      }
       return true
     }
   }
