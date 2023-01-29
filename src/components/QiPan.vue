@@ -7,13 +7,11 @@ class QiZiInfo {
   color = ''
   name = ''
   location = [-1 , -1]
-  picked = false
 
-  constructor(color, name, location, picked = false) {
+  constructor(color, name, location) {
     this.color = color
     this.name = name
     this.location = location
-    this.picked = picked
   }
 }
 
@@ -118,11 +116,44 @@ function isMoveCheckOk(r, c) {
     } else { // 非过河卒
       return p.location[0] === r - 1 && p.location[1] === c // 只能往前一步
     }
+  } else if (p.name === '炮') {
+    // 只能直着走或者横着走，与目标之间最多只能有一个棋子
+    const qzBt = []
+    if (p.location[0] === r) { // 横着走
+      for (const qz of state.situation.qiZiInfoList) {
+        if (qz.location[0] === r && between(qz.location[1], p.location[1], c)) {
+          qzBt.push(qz)
+        }
+      }
+      // qiZiInfoList中的棋子的顺序是不确定的，因此要根据棋子的位置排序，以便后面比较
+      // 横着走时根据纵坐标排序；
+      qzBt.sort((a, b) => a.location[1] - b.location[1])
+    } else if(p.location[1] === c) { // 竖着走
+      for (const qz of state.situation.qiZiInfoList) {
+        if (qz.location[1] === c && between(qz.location[0], p.location[0], r)) {
+          qzBt.push(qz)
+        }
+      }
+      // 竖着走时根据横坐标排序
+      qzBt.sort((a, b) => a.location[0] - b.location[0])
+    }
+    if (qzBt.length === 1) { // 之间除了自己没有其他棋子，即为普通走子
+      return true
+    }
+    if (qzBt.length === 3) { // 之间包含自己和目标共3个棋子，即为翻山吃子，则目标必须为对方棋子
+      return qzBt[0] === p && qzBt[2].color !== p.color || qzBt[2] === p && qzBt[0].color !== p.color
+    }
   } else {
 
   }
   return false
 }
+
+// 判断a是否在b和c之间
+function between (a, b, c) {
+  return a >= b && a <= c || a <= b && a >= c
+}
+
 </script>
 <template>
   <div class="qipan">
