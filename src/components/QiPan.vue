@@ -1,5 +1,6 @@
 <script setup>
-import { reactive } from 'vue';
+import _ from 'lodash'
+import { reactive, ref } from 'vue';
 import QiZi from './QiZi.vue'
 
 // 棋子信息
@@ -18,6 +19,19 @@ class QiZiInfo {
 // 局面信息
 class Situation {
   qiZiInfoList = []
+}
+
+// 棋谱
+class Manual {
+  moves = []
+}
+
+class Move {
+  qz = null
+  to = [-1, -1]
+  oldSituation = []
+  newSituation = []
+  desc = ''
 }
 
 const state = reactive({
@@ -57,8 +71,13 @@ const state = reactive({
       new QiZiInfo('红', '兵', [6, 6]),
       new QiZiInfo('红', '兵', [6, 8]),
     ],
-  }
+  },
+  manual: {
+    moves: [],
+  },
 })
+
+const scrollBoxManual = ref(null)
 
 function pick(q) {
   // 拿起后放下棋子
@@ -90,13 +109,146 @@ function isPicked(q) {
 function move(r, c) {
   if (state.picked) {
     if (isMoveCheckOk(r, c)) {
+      const old = _.cloneDeep(state.situation)
+      const picked = _.cloneDeep(state.picked)
       state.picked.location[0] = r
       state.picked.location[1] = c
       state.picked = null
+      state.manual.moves.push({
+        qz: picked,
+        to: [r, c],
+        oldSituation: old,
+        newSituation: _.cloneDeep(state.situation),
+        desc: moveDesc(old, picked, [r, c]),
+      })
+      setTimeout(() => {
+        scrollBoxManual.value.scrollTo(0, scrollBoxManual.value.scrollHeight)
+      }, 0)
     } else {
       console.warn('走子违反规则！')
     }
   }
+}
+function moveDesc(oldSituation, qz, to) {
+  const name = qz.name
+  let colFrom = ''
+  let colTo = ''
+  let direction = ''
+  let offset = ''
+  if (qz.color === '红') {
+    colFrom = '一二三四五六七八九'.charAt(8 - qz.location[1])
+    colTo = '一二三四五六七八九'.charAt(8 - to[1])
+    if (to[0] < qz.location[0]) {
+      direction = '进'
+      offset = '一二三四五六七八九'.charAt(qz.location[0] - to[0] - 1)
+    } else if (to[0] > qz.location[0]) {
+      direction = '退'
+      offset = '一二三四五六七八九'.charAt(to[0] - qz.location[0] - 1)
+    } else {
+      direction = '平'
+    }
+  } else {
+    colFrom = '１２３４５６７８９'.charAt(qz.location[1])
+    colTo = '１２３４５６７８９'.charAt(to[1])
+    if (to[0] > qz.location[0]) {
+      direction = '进'
+      offset = '１２３４５６７８９'.charAt(to[0] - qz.location[0] - 1)
+    } else if (to[0] < qz.location[0]) {
+      direction = '退'
+      offset = '１２３４５６７８９'.charAt(qz.location[0] - to[0] - 1)
+    } else {
+      direction = '平'
+    }
+  }
+  // 棋子前后判断
+  if (name === '車' ||
+      name === '馬' ||
+      name === '炮' ||
+      name === '兵' ||
+      name === '卒'
+  ) {
+    // 找出与选中棋子处于相同列的其他棋子
+    const sameQzs = oldSituation.qiZiInfoList.filter(q => q.color === qz.color && q.name === qz.name && q.location[1] === qz.location[1])
+    if (sameQzs.length > 1) {
+      if (qz.color === '黑') { // 从大到小排序
+        sameQzs.sort((a, b) => - a.location[0] + b.location[0])
+      } else { // 从小到大排序
+        sameQzs.sort((a, b) => a.location[0] - b.location[0])
+      }
+      const index = sameQzs.findIndex(e => e.location[0] === qz.location[0] && e.location[1] === qz.location[1])
+      let prefix = ''
+      if (sameQzs.length === 2) {
+        if (index === 0) {
+          prefix = '前' + name
+        } else {
+          prefix = '后' + name
+        }
+      } else if (sameQzs.length === 3) {
+        if (index === 0) {
+          prefix = '前' + name
+        } else if (index === 1) {
+          prefix = '中' + name
+        } else {
+          prefix = '后' + name
+        }
+      } else if (sameQzs.length === 4) {
+        if (index === 0) {
+          prefix = '前' + name
+        } else if (index === 1) {
+          prefix = '二' + name
+        } else if (index === 2) {
+          prefix = '三' + name
+        } else {
+          prefix = '四' + name
+        }
+      } else if (sameQzs.length === 5) {
+        if (index === 0) {
+          prefix = '前' + name
+        } else if (index === 1) {
+          prefix = '二' + name
+        } else if (index === 2) {
+          prefix = '三' + name
+        } else if (index === 3) {
+          prefix = '四' + name
+        } else {
+          prefix = '五' + name
+        }
+      }
+      // 两列兵卒的情况------实战中极其少见
+      if (name === '兵' || name === '卒') {
+        if (sameQzs.length === 2 || sameQzs.length === 3) {
+          // 如果其他任意一列上有2个以上兵（卒），即为 2列 多兵（卒） 的情况
+          let flag = false
+          for (let i = 0; i < 9; i++) {
+            if (i === qz.location[1]) { // 越过当前列，只检查其他列
+              continue
+            }
+            const otherSameQzs = oldSituation.qiZiInfoList.filter(q => q.color === qz.color && q.name === qz.name && q.location[1] === i)
+            if (otherSameQzs.length > 1) {
+              flag = true
+              break;
+            }
+          }
+          if (flag) {
+            prefix = prefix.slice(0, 1) + colFrom
+          }
+        }
+      }
+      if (name === '馬' || direction === '平') {
+        return prefix + direction + colTo
+      } else {
+        return prefix + direction + offset
+      }
+    }
+  }
+  if (direction === '平') {
+    return name + colFrom + direction + colTo
+  }
+  if (name === '馬' || name === '相' || name === '象' || name === '士' || name === '仕') {
+    return name + colFrom + direction + colTo
+  }
+
+  return name + colFrom + direction + offset
 }
 // 各种棋子走动时是否符合规则的判断逻辑
 function isMoveCheckOk(r, c) {
@@ -240,32 +392,66 @@ function between (a, b, c) {
 
 </script>
 <template>
-  <div class="qipan">
-    <div class="diagonal diagonal-1"></div>
-    <div class="diagonal diagonal-2"></div>
-    <div class="diagonal diagonal-3"></div>
-    <div class="diagonal diagonal-4"></div>
-    <div class="locations">
-      <div v-for="r in 10" :class="`row row-${ r - 1 }`">
-        <div v-for="c in 9" :class="`cell cell-${ c - 1 }`" @mousedown="move(r - 1, c - 1)">
-          <div class="line-x"></div>
-          <div class="line-y"></div>
+  <div class="qipan-wrapper">
+    <div class="qipan">
+      <div class="diagonal diagonal-1"></div>
+      <div class="diagonal diagonal-2"></div>
+      <div class="diagonal diagonal-3"></div>
+      <div class="diagonal diagonal-4"></div>
+      <div class="locations">
+        <div v-for="r in 10" :class="`row row-${ r - 1 }`">
+          <div v-for="c in 9" :class="`cell cell-${ c - 1 }`" @mousedown="move(r - 1, c - 1)">
+            <div class="line-x"></div>
+            <div class="line-y"></div>
+          </div>
+        </div>
+      </div>
+      <QiZi v-for="q in state.situation.qiZiInfoList" 
+        :color="q.color" 
+        :name="q.name" 
+        :location="q.location.slice()"
+        :picked="isPicked(q)"
+        @mousedown="pick(q)"
+        ></QiZi>
+    </div>
+    <div class="manual">
+      <div style="padding-left: 7px;">棋谱：</div>
+      <div class="moves" ref="scrollBoxManual">
+        <div class="move" v-for="(m, i) in state.manual.moves">
+          <span class="index">
+            <template v-if="i % 2 === 0">{{ i/2+1 }}.</template>
+          </span>
+          <span>{{ m.desc }}</span>
         </div>
       </div>
     </div>
-    <QiZi v-for="q in state.situation.qiZiInfoList" 
-      :color="q.color" 
-      :name="q.name" 
-      :location="q.location.slice()"
-      :picked="isPicked(q)"
-      @mousedown="pick(q)"
-      ></QiZi>
   </div>
 </template>
 <style scoped lang="less">
 @line-color: blue;
+.qipan-wrapper {
+  display: flex;
+}
 .qipan {
   position: relative;
+}
+.manual {
+  text-align: left;
+}
+.moves {
+  text-align: left;
+  font-size: 14px;
+  line-height: normal;
+  box-sizing: border-box;
+  height: 27rem;
+  width: 9rem;
+  overflow-y: scroll;
+  .index {
+    display: inline-block;
+    width: 22px;
+    padding-right: 2px;
+    text-align: right;
+  }
 }
 // .locations {
 //   position: relative;
