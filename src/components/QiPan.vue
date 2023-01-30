@@ -77,6 +77,13 @@ const state = reactive({
   },
 })
 
+function back() {
+  const move = state.manual.moves.pop()
+  if (move) {
+    state.situation = move.oldSituation
+  }
+}
+
 const scrollBoxManual = ref(null)
 
 function pick(q) {
@@ -88,9 +95,13 @@ function pick(q) {
   // 吃子
   if (state.picked && state.picked.color !== q.color) {
     if (isMoveCheckOk(q.location[0], q.location[1])) {
+      const old = _.cloneDeep(state.situation)
+      const picked = _.cloneDeep(state.picked)
       state.picked.location[0] = q.location[0]
       state.picked.location[1] = q.location[1]
-      state.picked = null
+      state.picked = null // 方向棋子
+      recordManual(picked, q.location, old, _.cloneDeep(state.situation))
+      // 把被吃棋子移出棋盘
       q.location[0] = -100
       q.location[1] = -100
     } else {
@@ -106,6 +117,19 @@ function isPicked(q) {
   return q === state.picked
 }
 
+function recordManual(picked, to, oldSituation, newSituation) {
+  state.manual.moves.push({
+    qz: picked,
+    to: to,
+    oldSituation: oldSituation,
+    newSituation: newSituation,
+    desc: moveDesc(oldSituation, picked, to),
+  })
+  setTimeout(() => {
+    scrollBoxManual.value.scrollTo(0, scrollBoxManual.value.scrollHeight)
+  }, 0)
+}
+
 function move(r, c) {
   if (state.picked) {
     if (isMoveCheckOk(r, c)) {
@@ -114,16 +138,17 @@ function move(r, c) {
       state.picked.location[0] = r
       state.picked.location[1] = c
       state.picked = null
-      state.manual.moves.push({
-        qz: picked,
-        to: [r, c],
-        oldSituation: old,
-        newSituation: _.cloneDeep(state.situation),
-        desc: moveDesc(old, picked, [r, c]),
-      })
-      setTimeout(() => {
-        scrollBoxManual.value.scrollTo(0, scrollBoxManual.value.scrollHeight)
-      }, 0)
+      recordManual(picked, [r, c], old, _.cloneDeep(state.situation))
+      // state.manual.moves.push({
+      //   qz: picked,
+      //   to: [r, c],
+      //   oldSituation: old,
+      //   newSituation: _.cloneDeep(state.situation),
+      //   desc: moveDesc(old, picked, [r, c]),
+      // })
+      // setTimeout(() => {
+      //   scrollBoxManual.value.scrollTo(0, scrollBoxManual.value.scrollHeight)
+      // }, 0)
     } else {
       console.warn('走子违反规则！')
     }
@@ -394,6 +419,28 @@ function between (a, b, c) {
 <template>
   <div class="qipan-wrapper">
     <div class="qipan">
+      <div class="column-index column-index-black">
+        <div>1</div>
+        <div>2</div>
+        <div>3</div>
+        <div>4</div>
+        <div>5</div>
+        <div>6</div>
+        <div>7</div>
+        <div>8</div>
+        <div>9</div>
+      </div>
+      <div class="column-index column-index-red">
+        <div>一</div>
+        <div>二</div>
+        <div>三</div>
+        <div>四</div>
+        <div>五</div>
+        <div>六</div>
+        <div>七</div>
+        <div>八</div>
+        <div>九</div>
+      </div>
       <div class="diagonal diagonal-1"></div>
       <div class="diagonal diagonal-2"></div>
       <div class="diagonal diagonal-3"></div>
@@ -424,6 +471,9 @@ function between (a, b, c) {
           <span>{{ m.desc }}</span>
         </div>
       </div>
+      <div class="ops">
+        <button @click="back()">后退</button>
+      </div>
     </div>
   </div>
 </template>
@@ -434,6 +484,21 @@ function between (a, b, c) {
 }
 .qipan {
   position: relative;
+}
+.column-index {
+  position: absolute;
+  display: flex;
+  & > div {
+    width: 3rem;
+    height: 1.5rem;
+  }
+  &-black {
+    top: -1.5rem;
+  }
+  &-red {
+    bottom: -1.5rem;
+    flex-flow: row-reverse;
+  }
 }
 .manual {
   text-align: left;
@@ -451,6 +516,15 @@ function between (a, b, c) {
     width: 22px;
     padding-right: 2px;
     text-align: right;
+  }
+}
+.ops {
+  button {
+    height: 1.5rem;
+    font-size: 12px;
+    line-height: 1.5rem;
+    padding: 0 7px;
+    margin: 0 5px;
   }
 }
 // .locations {
